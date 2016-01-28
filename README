@@ -9,3 +9,9 @@ pip install -r requirements.txt
 **
 To install tensorflow, see https://tensorflow.org
 **
+
+**
+Install theano and keras
+pip install git+git://github.com/Theano/Theano.git
+pip install keras
+**
