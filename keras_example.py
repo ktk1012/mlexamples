@@ -24,7 +24,17 @@ VALIDATION_SIZE = 5000
 NUM_CHANNELS = 1
 NUM_EPOCHS = 1
 
+
+def error_rate(predictions, labels):
+    """Return the error rate based on dense predictions and 1-hot labels."""
+    return 100.0 - (
+        100.0 *
+        numpy.sum(numpy.argmax(predictions, 1) == numpy.argmax(labels, 1)) /
+        predictions.shape[0])
+
+
 def main():
+    filepath = './save_point/checkpoint'
     train_data_filename = maybe_download('train-images-idx3-ubyte.gz')
     train_labels_filename = maybe_download('train-labels-idx1-ubyte.gz')
     test_data_filename = maybe_download('t10k-images-idx3-ubyte.gz')
@@ -64,11 +74,15 @@ def main():
         train_labels,
         nb_epoch=NUM_EPOCHS,
         batch_size=100,
+        show_accuracy=True,
         validation_data=validation_set)
 
-    score = model.evaluate(test_data, test_labels, batch_size=100)
+    print 'Save model weights'
+    model.save_weights(filepath, overwrite=False)
 
-    print 'Score: %d' % score
+    predict = model.predict(test_data, batch_size=100, verbose=1)
+
+    print 'Test err: %.1f%%' % error_rate(predict, test_labels)
 
 if __name__ == "__main__":
     main()
