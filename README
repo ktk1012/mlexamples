@@ -1,0 +1,10 @@
+Machine learning examples - written in python
+
+This repository includes some usage code of scikit-learn and tensorflow packages.
+
+usage:
+pip install -r requirements.txt
+
+**
+To install tensorflow, see https://tensorflow.org
+**
