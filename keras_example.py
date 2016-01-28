@@ -66,7 +66,7 @@ def main():
         batch_size=100,
         validation_data=validation_set)
 
-    score = model.evaluate(test_data, train_labels, batch_size=100)
+    score = model.evaluate(test_data, test_labels, batch_size=100)
 
     print 'Score: %d' % score
 
