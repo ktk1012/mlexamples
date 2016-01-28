@@ -3,6 +3,7 @@ Machine learning examples - written in python
 This repository includes some usage code of scikit-learn and tensorflow packages.
 
 usage:
+git clone https://github.com/ktk1012/mlexamples
 pip install -r requirements.txt
 
 **
