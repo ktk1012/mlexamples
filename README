@@ -15,3 +15,7 @@ Install theano and keras
 pip install git+git://github.com/Theano/Theano.git
 pip install keras
 **
+
+**
+Keras example is not fully tested.
+**
