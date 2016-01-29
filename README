@@ -16,6 +16,8 @@ pip install git+git://github.com/Theano/Theano.git
 pip install keras
 **
 
-**
-Keras example is not fully tested.
+** refs **
+tensorflow: https://tensorflow.org/
+theano: https://deeplearning.net/software/theano/
+keras: https://keras.io/
 **
