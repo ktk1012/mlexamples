@@ -29,12 +29,12 @@ def error_rate(predictions, labels):
     """Return the error rate based on dense predictions and 1-hot labels."""
     return 100.0 - (
         100.0 *
-        numpy.sum(numpy.argmax(predictions, 1) == numpy.argmax(labels, 1)) /
+        np.sum(np.argmax(predictions, 1) == np.argmax(labels, 1)) /
         predictions.shape[0])
 
 
 def main():
-    filepath = './save_point/checkpoint'
+    filepath = './save_point/checkpoint.h5'
     train_data_filename = maybe_download('train-images-idx3-ubyte.gz')
     train_labels_filename = maybe_download('train-labels-idx1-ubyte.gz')
     test_data_filename = maybe_download('t10k-images-idx3-ubyte.gz')
@@ -47,7 +47,6 @@ def main():
     test_data = test_data.reshape((10000, NUM_CHANNELS, IMG_SIZE, IMG_SIZE))
     test_labels = extract_labels(test_labels_filename, 10000, one_hot=True)
 
-    #TODO: Split into validation and training sets
     validation_data = train_data[:VALIDATION_SIZE, ...]
     validation_labels = train_labels[:VALIDATION_SIZE, :]
     validation_set = (validation_data, validation_labels)
