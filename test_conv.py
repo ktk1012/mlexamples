@@ -35,9 +35,9 @@ NUM_CHANNELS = 1  # Number of image channel (e.g RGB or gray scale)
 NUM_LABELS = 2  # The number of target labels
 VALIDATION_SIZE = 5000  # Size of the validation set.
 SEED = 66478  # Set to None for random seed.
-BATCH_SIZE = 64  # Size of each training batch
-NUM_EPOCHS = 10  # The number of epochs to training
-EVAL_BATCH_SIZE = 64  # Size of evaluation batch size
+BATCH_SIZE = 1000  # Size of each training batch
+NUM_EPOCHS = 1  # The number of epochs to training
+EVAL_BATCH_SIZE = 1000  # Size of evaluation batch size
 EVAL_FREQUENCY = 100  # Number of steps between evaluations.
 
 
@@ -93,7 +93,7 @@ def main(argv=None):  # pylint: disable=unused-argument
 
   # First convolutional layer
   conv1_weights = tf.Variable(
-      tf.truncated_normal([5, 5, NUM_CHANNELS, 32],  # 5x5 filter, depth 32.
+      tf.truncated_normal([3, 3, NUM_CHANNELS, 32],  # 5x5 filter, depth 32.
                           stddev=0.1,
                           seed=SEED))
   conv1_biases = tf.Variable(tf.zeros([32]))
@@ -281,10 +281,6 @@ def main(argv=None):  # pylint: disable=unused-argument
     # Finally print the result!
     test_error = error_rate(eval_in_batches(test_data, sess), test_labels)
     print('Test error: %.1f%%' % test_error)
-    if FLAGS.self_test:
-      print('test_error', test_error)
-      assert test_error == 0.0, 'expected 0.0 test_error, got %.2f' % (
-          test_error,)
     print ('Optimization done')
     print ('Save models')
     saver_path = saver.save(sess, "./conv_save/model.ckpt")
