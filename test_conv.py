@@ -12,23 +12,20 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import gzip
-import os
 import sys
 import time
 
-import tensorflow.python.platform
+from six.moves import xrange  # pylint: disable=redefined-builtin
 
 import numpy
-from six.moves import urllib
-from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
-import matplotlib.pyplot as plt
-
 from utils import (
     maybe_download,
     extract_data,
     extract_labels)
+
+import matplotlib.pyplot as plt
+from PIL import Image
 
 IMAGE_SIZE = 28  # Image size
 NUM_CHANNELS = 1  # Number of image channel (e.g RGB or gray scale)
@@ -38,10 +35,16 @@ SEED = 66478  # Set to None for random seed.
 BATCH_SIZE = 1000  # Size of each training batch
 NUM_EPOCHS = 1  # The number of epochs to training
 EVAL_BATCH_SIZE = 1000  # Size of evaluation batch size
-EVAL_FREQUENCY = 100  # Number of steps between evaluations.
+EVAL_FREQUENCY = 10  # Number of steps between evaluations.
 
+flags = tf.app.flags
+FLAGS = flags.FLAGS
+flags.DEFINE_boolean ('train', True, 'If true execute model training routine,'
+                      'otherwise execute filtered image extraction routine')
+flags.DEFINE_string ('model', None, 'If trained data already exists, load it')
+flags.DEFINE_string ('input', None, 'Source of image, if None use random images from MNIST dataset')
 
-FLAGS = tf.app.flags.FLAGS
+#TODO: Make conv image extraction flags.
 
 
 def error_rate(predictions, labels):
@@ -191,6 +194,34 @@ def main(argv=None):  # pylint: disable=unused-argument
       hidden = tf.nn.dropout(hidden, 0.5, seed=SEED)
     return tf.matmul(hidden, fc3_weights) + fc3_biases
 
+  def extract_filter (data):
+    conv = tf.nn.conv2d(data,
+                        conv1_weights,
+                        strides=[1, 1, 1, 1],
+                        padding='SAME')
+    # Bias and rectified linear non-linearity.
+    relu1 = tf.nn.relu(tf.nn.bias_add(conv, conv1_biases))
+
+    # Max pooling. The kernel size spec {ksize} also follows the layout of
+    # the data. Here we have a pooling window of 2, and a stride of 2.
+    pool = tf.nn.max_pool(relu1,
+                          ksize=[1, 2, 2, 1],
+                          strides=[1, 2, 2, 1],
+                          padding='SAME')
+    conv = tf.nn.conv2d(pool,
+                        conv2_weights,
+                        strides=[1, 1, 1, 1],
+                        padding='SAME')
+    relu2 = tf.nn.relu(tf.nn.bias_add(conv, conv2_biases))
+    conv2 = tf.nn.conv2d(pool,
+                         conv2_weights2,
+                         strides=[1, 1, 1, 1],
+                         padding='SAME')
+    relu3 = tf.nn.relu(tf.nn.bias_add(conv2, conv2_biases2))
+
+    return relu1, relu2, relu3
+
+
   # Training computation: logits + cross-entropy loss.
   logits = model(train_data_node, True)
   loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
@@ -251,40 +282,62 @@ def main(argv=None):  # pylint: disable=unused-argument
   start_time = time.time()
   with tf.Session() as sess:
     # Run all the initializers to prepare the trainable parameters.
-    sess.run(tf.initialize_all_variables())
-    # Loop through training steps.
-    for step in xrange(int(num_epochs * train_size) // BATCH_SIZE):
-      # Compute the offset of the current minibatch in the data.
-      # Note that we could use better randomization across epochs.
-      offset = (step * BATCH_SIZE) % (train_size - BATCH_SIZE)
-      batch_data = train_data[offset:(offset + BATCH_SIZE), ...]
-      batch_labels = train_labels[offset:(offset + BATCH_SIZE)]
-      # This dictionary maps the batch data (as a numpy array) to the
-      # node in the graph is should be fed to.
-      feed_dict = {train_data_node: batch_data,
-                   train_labels_node: batch_labels}
-      # Run the graph and fetch some of the nodes.
-      _, l, lr, predictions = sess.run(
-          [optimizer, loss, learning_rate, train_prediction],
-          feed_dict=feed_dict)
-      if step % EVAL_FREQUENCY == 0:
-        elapsed_time = time.time() - start_time
-        start_time = time.time()
-        print('Step %d (epoch %.2f), %.1f ms' %
-              (step, float(step) * BATCH_SIZE / train_size,
-               1000 * elapsed_time / EVAL_FREQUENCY))
-        print('Minibatch loss: %.3f, learning rate: %.6f' % (l, lr))
-        print('Minibatch error: %.1f%%' % error_rate(predictions, batch_labels))
-        print('Validation error: %.1f%%' % error_rate(
-            eval_in_batches(validation_data, sess), validation_labels))
-        sys.stdout.flush()
-    # Finally print the result!
-    test_error = error_rate(eval_in_batches(test_data, sess), test_labels)
-    print('Test error: %.1f%%' % test_error)
-    print ('Optimization done')
-    print ('Save models')
-    saver_path = saver.save(sess, "./conv_save/model.ckpt")
-    print ('Successfully saved file: %s' % saver_path)
+    if FLAGS.model:
+      saver.restore(sess, FLAGS.model)  # If model exists, load it
+    else:
+      sess.run(tf.initialize_all_variables())  # If there is no model randomly initialize
+    if FLAGS.train:
+      # Loop through training steps.
+      for step in xrange(int(num_epochs * train_size) // BATCH_SIZE):
+        # Compute the offset of the current minibatch in the data.
+        # Note that we could use better randomization across epochs.
+        offset = (step * BATCH_SIZE) % (train_size - BATCH_SIZE)
+        batch_data = train_data[offset:(offset + BATCH_SIZE), ...]
+        batch_labels = train_labels[offset:(offset + BATCH_SIZE)]
+        # This dictionary maps the batch data (as a numpy array) to the
+        # node in the graph is should be fed to.
+        feed_dict = {train_data_node: batch_data,
+                     train_labels_node: batch_labels}
+        # Run the graph and fetch some of the nodes.
+        _, l, lr, predictions = sess.run(
+            [optimizer, loss, learning_rate, train_prediction],
+            feed_dict=feed_dict)
+        if step % EVAL_FREQUENCY == 0:
+          elapsed_time = time.time() - start_time
+          start_time = time.time()
+          print('Step %d (epoch %.2f), %.1f ms' %
+                (step, float(step) * BATCH_SIZE / train_size,
+                 1000 * elapsed_time / EVAL_FREQUENCY))
+          print('Minibatch loss: %.3f, learning rate: %.6f' % (l, lr))
+          print('Minibatch error: %.1f%%' % error_rate(predictions, batch_labels))
+          print('Validation error: %.1f%%' % error_rate(
+              eval_in_batches(validation_data, sess), validation_labels))
+          sys.stdout.flush()
+      # Finally print the result!
+      test_error = error_rate(eval_in_batches(test_data, sess), test_labels)
+      print('Test error: %.1f%%' % test_error)
+      print ('Optimization done')
+      print ('Save models')
+      if not tf.gfile.Exists("./conv_save"):
+          tf.gfile.MakeDirs("./conv_save")
+      saver_path = saver.save(sess, "./conv_save/model.ckpt")
+      print ('Successfully saved file: %s' % saver_path)
+    else:  # If train flag is false, execute image extraction routine
+      print ("Filter extraction routine")
+      aa = train_data[1:2, :, :, :]
+      print (aa.shape)
+      # Run extract filter operations (conv1, conv2 and conv3 layers)
+      images = sess.run(extract_filter(train_data[1:2, :, :, :]))
+      print (images[2].shape)
+      plt.imshow (images[2][0, :, :, 32] * 255 + 255 / 2, cmap='gray')
+      # plt.imshow (images[2][0, :, :, 32], cmap='gray')
+      plt.show ()
+      # Save all outputs
+      for i in range (3):
+        filter_shape = images[i].shape
+        img_size = [filter_shape[1], filter_shape[2]]
+        print (img_size)
+        # new_im = Image.new()
 
 
 if __name__ == '__main__':
