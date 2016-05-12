@@ -99,7 +99,7 @@ def main():
         name='fc2-relu',
         input='fc2')
     graph.add_node(
-        Dense(2),
+        Dense(10),
         name='fc3',
         input='fc2-relu')
     graph.add_node(
@@ -113,10 +113,10 @@ def main():
     sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9)
 
     graph.compile(
-        optimizer=sgd, loss={'output': 'categorical_crossentropy'})
+        optimizer=sgd, loss={'output': 'categorical_crossentropy'}, metrics=["accuracy"])
 
 
-    graph.fit({'input1': train_data, 'output': train_labels}, nb_epoch=1, verbose=1, batch_size=100)
+    graph.fit({'input1': train_data, 'output': train_labels}, nb_epoch=1, verbose=1, batch_size=1000)
     predictions = graph.predict({'input1': test_data, 'output': test_labels}, batch_size=100)
     print 'Test error: %.1f%%' % error_rate(predictions, test_labels)
 

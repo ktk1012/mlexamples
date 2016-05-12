@@ -1,4 +1,5 @@
 import numpy as np
+import os
 # Utility for download digit dataset
 from utils import (
     maybe_download,
@@ -19,10 +20,10 @@ from keras.optimizers import SGD
 # Global variables
 BATCH_SIZE = 100
 IMG_SIZE = 28
-NUM_LABELS = 2
+NUM_LABELS = 10
 VALIDATION_SIZE = 5000
 NUM_CHANNELS = 1
-NUM_EPOCHS = 1
+NUM_EPOCHS = 10
 
 
 def error_rate(predictions, labels):
@@ -34,6 +35,7 @@ def error_rate(predictions, labels):
 
 
 def main():
+    savepath = './save_point'
     filepath = './save_point/checkpoint.h5'
     train_data_filename = maybe_download('train-images-idx3-ubyte.gz')
     train_labels_filename = maybe_download('train-labels-idx1-ubyte.gz')
@@ -55,7 +57,7 @@ def main():
 
     model = Sequential()
     model.add(Convolution2D(32, 3, 3, border_mode='same',
-        input_shape=(1, 28, 28)))
+              input_shape=(1, 28, 28)))
     model.add(Activation('relu'))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Convolution2D(64, 3, 3, border_mode='same'))
@@ -63,25 +65,31 @@ def main():
     model.add(Dense(256))
     model.add(Activation('relu'))
     model.add(Dropout(0.5))
-    model.add(Dense(2))
+    model.add(Dense(10))
     model.add(Activation('softmax'))
     sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9)
-    model.compile(loss='categorical_crossentropy', optimizer=sgd)
+    model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=["accuracy"])
 
     model.fit(
         train_data,
         train_labels,
         nb_epoch=NUM_EPOCHS,
-        batch_size=100,
-        show_accuracy=True,
+        batch_size=1000,
         validation_data=validation_set)
 
     print 'Save model weights'
-    model.save_weights(filepath, overwrite=False)
+    if not os.path.isdir (savepath):
+        os.mkdir (savepath)
+    model.save_weights(filepath, overwrite=True)
 
-    predict = model.predict(test_data, batch_size=100, verbose=1)
+    predict = model.predict(test_data, batch_size=1000)
 
     print 'Test err: %.1f%%' % error_rate(predict, test_labels)
+
+    print 'Test loss: %1.f%%, accuracy: %1.f%%', model.evaluate(
+                                                    x=test_data,
+                                                    y=test_labels,
+                                                    batch_size=1000)
 
 if __name__ == "__main__":
     main()
