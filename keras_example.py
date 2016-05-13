@@ -23,7 +23,7 @@ IMG_SIZE = 28
 NUM_LABELS = 10
 VALIDATION_SIZE = 5000
 NUM_CHANNELS = 1
-NUM_EPOCHS = 10
+NUM_EPOCHS = 1
 
 
 def error_rate(predictions, labels):
@@ -36,7 +36,9 @@ def error_rate(predictions, labels):
 
 def main():
     savepath = './save_point'
-    filepath = './save_point/checkpoint.h5'
+    filepath = './save_point/keras_example_checkpoint.h5'
+
+    # Extract MNIST dataset
     train_data_filename = maybe_download('train-images-idx3-ubyte.gz')
     train_labels_filename = maybe_download('train-labels-idx1-ubyte.gz')
     test_data_filename = maybe_download('t10k-images-idx3-ubyte.gz')
@@ -55,6 +57,7 @@ def main():
     train_data = train_data[VALIDATION_SIZE:, ...]
     train_labels = train_labels[VALIDATION_SIZE:, ...]
 
+    # Model construction
     model = Sequential()
     model.add(Convolution2D(32, 3, 3, border_mode='same',
               input_shape=(1, 28, 28)))
@@ -67,6 +70,8 @@ def main():
     model.add(Dropout(0.5))
     model.add(Dense(10))
     model.add(Activation('softmax'))
+
+    # Define optimizer and configure training process
     sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9)
     model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=["accuracy"])
 
@@ -86,10 +91,8 @@ def main():
 
     print 'Test err: %.1f%%' % error_rate(predict, test_labels)
 
-    print 'Test loss: %1.f%%, accuracy: %1.f%%', model.evaluate(
-                                                    x=test_data,
-                                                    y=test_labels,
-                                                    batch_size=1000)
+    print 'Test loss: %1.f%%, accuracy: %1.f%%', \
+        tuple(model.evaluate(test_data, test_labels, batch_size=1000))
 
 if __name__ == "__main__":
     main()
